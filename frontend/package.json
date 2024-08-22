@@ -1,0 +1,62 @@
+{
+  "name": "client",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@chatscope/chat-ui-kit-react": "^1.10.1",
+    "@chatscope/chat-ui-kit-styles": "^1.4.0",
+    "@react-oauth/google": "^0.12.1",
+    "@testing-library/jest-dom": "^5.17.0",
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/user-event": "^13.5.0",
+    "antd": "^5.11.0",
+    "aws-sdk": "^2.1542.0",
+    "axios": "^1.5.1",
+    "concurrently": "^8.2.2",
+    "cors": "^2.8.5",
+    "crypto-browserify": "^3.12.0",
+    "gapi-script": "^1.2.0",
+    "jsonwebtoken": "^9.0.2",
+    "jwt-decode": "^4.0.0",
+    "lucide-react": "^0.383.0",
+    "react": "^18.2.0",
+    "react-cropper": "^2.3.3",
+    "react-dom": "^18.2.0",
+    "react-google-login": "^5.2.2",
+    "react-helmet": "^6.1.0",
+    "react-hot-toast": "^2.4.1",
+    "react-icons": "^4.11.0",
+    "react-router-dom": "^6.16.0",
+    "react-scripts": "^5.0.1",
+    "react-toastify": "^9.1.3",
+    "slugify": "^1.6.6",
+    "stream-browserify": "^3.0.0",
+    "styled-components": "^6.1.8",
+    "web-vitals": "^2.1.4"
+  },
+  "scripts": {
+    "dev": "concurrently \"npm start\" \"cd ../backendnode && npm run server\" \"cd../backendpython &&  python flask_app.py\"",
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
