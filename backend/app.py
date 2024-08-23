@@ -20,4 +20,4 @@ app.register_blueprint(auth_blueprint,url_prefix='/api/v1/auth')
 app.register_blueprint(bot_blueprint,url_prefix='/api')
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=8080, debug=True)

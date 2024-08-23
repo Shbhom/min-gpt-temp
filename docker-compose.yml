@@ -2,17 +2,28 @@ version: '3'
 services:
   flask-backend:
     build: ./backend
+    environment:
+      - MONGO_URI=mongodb://root:example@localhost:27017/admin?authSource=admin
+
     volumes:
       - ./backend:/app
     ports:
-      - "5000:5000"
+      - "8080:8080"
 
   react-frontend:
-    build: ./frontend
-    volumes:
-      - ./frontend:/app
+    build:
+      target: ./frontend
     ports:
       - "3000:3000"
+  
+  mongo:
+    image: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    ports:
+      - "27017:27017"
 
   # nginx:
   #   build: ./nginx
