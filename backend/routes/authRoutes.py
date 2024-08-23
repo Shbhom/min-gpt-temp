@@ -1,4 +1,5 @@
 from bson import ObjectId
+# from pymongo import ObjectId
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
 from flask import request,jsonify,Blueprint
 from flask_bcrypt import Bcrypt
@@ -23,6 +24,7 @@ def signup():
         name = data['name']
         answer = data['answer']
 
+        print("got all details")
         new_user = {
             'name': name,
             'email': email,
@@ -33,15 +35,16 @@ def signup():
             'created_at': datetime.utcnow(),
             'updated_at': datetime.utcnow()
         }
-
+        print("going to insert new user")
         if db.users.insert_one(new_user):
+          print("inserted successfully")
           return jsonify({"success":True,"message": "User Registered Successfully"}), 200
         else:
           return jsonify({"success":False,"message": "Internal Server Error"}), 200
 
 
     except Exception as e:
-        return jsonify({"success":False,"message": f"Something Went Wrong"}), 500
+        return jsonify({"success":False,"message": str(e)}), 500
 
 @auth_blueprint.route('/login', methods=['POST'])
 def login():
@@ -97,7 +100,7 @@ def forgot_password():
       return jsonify({"success": False, "message": "error updating the password"}), 200
 
   except Exception as e:
-    return jsonify({"success": False, "message": "Something Went Wrong"}), 400
+    return jsonify({"success": False, "message": f"Something Went Wrong{e}"}), 400
   
 @auth_blueprint.route('/get-all-users', methods=['GET'])
 @jwt_required()

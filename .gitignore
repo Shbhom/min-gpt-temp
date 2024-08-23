@@ -1,5 +1,8 @@
 *.out
 vectorstore*
 data
-nginx
+nginx/
 **/.env
+**/flask
+ollama/
+k8s/
