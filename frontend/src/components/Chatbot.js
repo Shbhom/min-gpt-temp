@@ -140,11 +140,9 @@ const Chatbot = () => {
   const convertTextToSpeech = async (generatedText) => {
     try {
       const response = await axios.post(
-        `${process.env.REACT_APP_API}/api/v1/tts`,
+        `${process.env.REACT_APP_API}/api/tts`,
         {
           text: generatedText,
-          userKey: userKey,
-          secretKey: secretKey,
         },
         { headers: { Authorization: `Bearer ${auth?.token}` } }
       );
