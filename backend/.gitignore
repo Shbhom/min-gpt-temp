@@ -1,8 +1,5 @@
 vectorstore*
 __pycache__
-**/__pycache__
-**/.env
-**/.ragatouille
-**/venv
-**/Data
-/data-tmp
+asset
+env
+.env

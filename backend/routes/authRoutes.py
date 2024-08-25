@@ -4,16 +4,15 @@ from flask import request,jsonify,Blueprint
 from flask_bcrypt import Bcrypt
 from common.db import db
 from datetime import datetime,timedelta
-from resource_manager import ResourceManager
 
 auth_blueprint = Blueprint('authentications', __name__)
 bcrypt = Bcrypt()
-RM=ResourceManager()
 
 @auth_blueprint.route('/register', methods=['POST'])
 def signup():
     try:
         data = request.get_json()
+        print(data)
         email = data['email']
 
         if db.users.find_one({'email': email}):
@@ -25,7 +24,6 @@ def signup():
         name = data['name']
         answer = data['answer']
 
-        print("got all details")
         new_user = {
             'name': name,
             'email': email,
@@ -36,19 +34,16 @@ def signup():
             'created_at': datetime.utcnow(),
             'updated_at': datetime.utcnow()
         }
-        print("going to insert new user")
-        newUser = db.users.insert_one(new_user) 
-        if newUser:
-          Rag,_=RM.get_resources()
-          RM.createIndex(index_name=f"{newUser.inserted_id}_index")
-          
+
+        if db.users.insert_one(new_user):
           return jsonify({"success":True,"message": "User Registered Successfully"}), 200
         else:
           return jsonify({"success":False,"message": "Internal Server Error"}), 200
 
 
     except Exception as e:
-        return jsonify({"success":False,"message": str(e)}), 500
+        print(e)
+        return jsonify({"success":False,"message": f"Something Went Wrong"}), 500
 
 @auth_blueprint.route('/login', methods=['POST'])
 def login():
@@ -104,7 +99,7 @@ def forgot_password():
       return jsonify({"success": False, "message": "error updating the password"}), 200
 
   except Exception as e:
-    return jsonify({"success": False, "message": f"Something Went Wrong{e}"}), 400
+    return jsonify({"success": False, "message": "Something Went Wrong"}), 400
   
 @auth_blueprint.route('/get-all-users', methods=['GET'])
 @jwt_required()

@@ -114,7 +114,7 @@ const Chatbot = () => {
 
   // .....................................................................
   const currentAudio = useRef(new Audio());
-  
+
   const handleSpeechRecognition = () => {
     const recognition = new window.webkitSpeechRecognition();
     recognition.onstart = () => {
@@ -136,15 +136,13 @@ const Chatbot = () => {
 
   const userKey = "NILZaBiKktP3P6fiFgIIdDTV5AC3";
   const secretKey = "be4b0c3fa42549fcad661b7c7406f84c";
-  
+
   const convertTextToSpeech = async (generatedText) => {
     try {
       const response = await axios.post(
-        `${process.env.REACT_APP_API}/api/v1/tts`,
+        `${process.env.REACT_APP_API}/api/tts`,
         {
           text: generatedText,
-          userKey: userKey,
-          secretKey: secretKey,
         },
         { headers: { Authorization: `Bearer ${auth?.token}` } }
       );
@@ -205,7 +203,7 @@ const Chatbot = () => {
     }
   };
 
-// .....................................................................
+  // .....................................................................
 
 
 
@@ -226,7 +224,7 @@ const Chatbot = () => {
   };
 
   const generateResponse = (chatElement) => {
-    
+
     const API_URL = `${process.env.REACT_APP_API}/api/ask`;
     const messageElement = chatElement.querySelector('p');
 
@@ -244,13 +242,13 @@ const Chatbot = () => {
     fetch(API_URL, requestOptions)
       .then((res) => res.json())
       .then((data) => {
-        if (data.success === true){
+        if (data.success === true) {
           messageElement.textContent = data.response
           handlePlayGeneratedText(data.response)
         }
-        else{
+        else {
           messageElement.classList.add('error');
-          if(!data.error){
+          if (!data.error) {
             messageElement.textContent = data.message;
             handlePlayGeneratedText(data.message)
           } else {
@@ -304,7 +302,7 @@ const Chatbot = () => {
       handleChat();
     }
   };
-   
+
 
   return (
     <>

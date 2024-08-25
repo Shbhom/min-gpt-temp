@@ -9,27 +9,29 @@ export const Register = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [answer, setAnswer] = useState("")
-  const [loadingSpinner,setLoadingSpinner] = useState(false)
+  const [loadingSpinner, setLoadingSpinner] = useState(false)
   const navigate = useNavigate();
 
   // form submission function
   const handelSubmit = async (e) => {
     e.preventDefault();
     setLoadingSpinner(true)
+    console.log("here", process.env.REACT_APP_API);
     try {
       const res = await axios.post(
         `${process.env.REACT_APP_API}/api/v1/auth/register`,
         { name, email, password, answer }
       );
 
-      if (res.data.success===true) {
+      if (res.data.success === true) {
         toast.success("Registration Successfull")
         navigate("/login");
       }
-      else if(res.data.success === false){
+      else if (res.data.success === false) {
         toast.error(res.data.message);
       }
     } catch (error) {
+      console.log(error);
       toast.error("Something Went Wrong")
     } finally {
       setLoadingSpinner(false)
@@ -89,12 +91,12 @@ export const Register = () => {
               required
             />
           </div>
-          <button disabled={loadingSpinner}  type="submit" className="d-flex align-items-center justify-content-center form-btn">
-          {loadingSpinner ? (
-                <div
-                  className="Spinner"
-                ></div>
-              ) : null}
+          <button disabled={loadingSpinner} type="submit" className="d-flex align-items-center justify-content-center form-btn">
+            {loadingSpinner ? (
+              <div
+                className="Spinner"
+              ></div>
+            ) : null}
             Register
           </button>
         </form>
