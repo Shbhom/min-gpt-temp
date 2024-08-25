@@ -5,8 +5,6 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 from dotenv import load_dotenv
 from common.chatBot import bot
 from common.db import db
-from ollama_helper import generateAnswer
-from helpers import pdf2MD,html2MD
 import fitz
 from resource_manager import ResourceManager
 
@@ -16,14 +14,11 @@ bot_blueprint = Blueprint('chatbot', __name__)
 
 chatBot = bot()  
 RM= ResourceManager()
-RM.initialize()
 
 @bot_blueprint.route('/ask', methods=['POST'])
 @jwt_required()
 def ask_question():
     try:
-        data = request.get_json()
-        user_question = data.get('query')
         id = get_jwt_identity()
         
         if not request.is_json:
@@ -34,18 +29,26 @@ def ask_question():
         if not isinstance(data['query'], str):
             return jsonify({"error": "'prompt' must be a string"}), 400
 
+        data = request.get_json()
+        user_question = data.get('query')
+        
         response_count = db.usage.count_documents({
             'user_id': id,
             'type': 'response_count',
             'created_at': {'$gte': datetime.now() - timedelta(minutes=10)}
         })
-
         if response_count > 5:
             return jsonify({"success":False,"message":"Response Limit Reached"})
         
+        llm = RM.getLLM() 
+        ret=RM.getRag_and_Retriever(index_name=f"{id}_index")
+        
+        conversation = chatBot.get_conversation_chain(retriever=ret,llm=llm)
+        chat_history = chatBot.getMessageHistory(str(id))
+        
         if db.usage.insert_one({"user_id":id, "type":"response", 'created_at': datetime.now()}):
-            _,llm,ret=RM.get_resources()
-            bot_responses = generateAnswer(retriever=ret,llm=llm,query=user_question)
+            bot_responses = chatBot.handle_userinput(user_question=user_question,conversation=conversation,chat_history=chat_history,retriever=ret)
+            chatBot.updateMessageHistory(str(id),query=user_question,response=bot_responses)
             return jsonify({"success":True, 'response': bot_responses})
         else:
             return jsonify({"success":True, 'message': "Something Went Wrong"}),500
@@ -75,9 +78,9 @@ def process_pdf():
         if pdf_file.filename == '':
             return jsonify({'success': False, 'error': 'No selected file'})
         pdf_document = fitz.open(stream=pdf_file.read(), filetype="pdf")
-        md = pdf2MD(pdf_document)
+        md = chatBot.pdf2MD(pdf_document)
         if db.usage.insert_one({"user_id":id, "type":"pdf", 'created_at': datetime.now()}):
-            RM.update_Rag_and_ret(md)
+            RM.updateIndex(indexName=f"{id}",md=md)
             return jsonify({"success":True, 'message':"Pdf processing Successfull" })
         else:
             return jsonify({"success":True, 'message': "Something Went Wrong"})
@@ -100,10 +103,9 @@ def process_video():
         })
         if response_count > 3:
             return jsonify({"success":False,"message":"Response Limit Reached"})
-        transscript  = chatBot.get_video_transcript(video_url)
-        md = chatBot.extract_text(transscript)
+        transcript  = chatBot.get_video_transcript(video_url)
         if db.usage.insert_one({"user_id":id, "type":"video", 'created_at': datetime.now()}):
-            RM.update_Rag_and_ret(md)
+            RM.updateIndex(indexName=f"{id}",md=transcript)
             return jsonify({"success":True, 'message':"Video processing Successfull" })
         else:
             return jsonify({"success":True, 'message': "Something Went Wrong"})
@@ -131,9 +133,9 @@ def process_url():
             return jsonify({'error': 'URL is required in the request data'})
 
         txt = chatBot.scrape_website(url)
-        new_md= html2MD(txt)
+        new_md = chatBot.html2MD(txt)
         if db.usage.insert_one({"user_id":id, "type":"website", 'created_at': datetime.now()}):
-            RM.update_Rag_and_ret(new_md=new_md)
+            RM.updateIndex(indexName=f"{id}",md=new_md)
             return jsonify({"success":True, 'message':"Video processing Successfull" })
         else:
             return jsonify({"success":True, 'message': "Something Went Wrong"})

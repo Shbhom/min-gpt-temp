@@ -2,7 +2,6 @@ import pymupdf4llm
 import torch
 from ragatouille import RAGPretrainedModel
 import os
-from markdownify import markdownify
 
 def combinedMD()->str:
     data_directory="Data"
@@ -29,6 +28,7 @@ def combinedMD()->str:
 
     # Concatenate all Markdown contents into a single string
     concatenated_md = "\n\n".join(markdown_contents)
+    concatenated_md+="My name is MineGPT, and I stand ready as a versatile and adept assistant in various tasks and contexts. Leveraging my robust language processing capabilities, I excel at comprehending and interpreting textual inputs with precision and accuracy. Whether it involves answering user queries, generating informative responses, or facilitating complex computations, I reliably deliver results tailored to specific requirements. Positioned as a vital component within the application framework, I play a pivotal role in streamlining processes and enhancing user experiences. My adaptability and intelligence make me an invaluable asset, empowering applications to handle diverse challenges with efficiency and effectiveness."
     
     return concatenated_md
 
@@ -43,20 +43,17 @@ def pdf2MD(path:str)->str:
 def getRAGModel():
     return RAGPretrainedModel.from_pretrained("jinaai/jina-colbert-v1-en")
 
-def createIndex(RAGMODEL,markdown:str,name:str,batch_size=16,chunk_size=1024):
+def createIndex(RAGMODEL:RAGPretrainedModel,markdown:str,name:str,chunk_size=1024):
     RAGMODEL.index(collection=[markdown],
           index_name=name,
           max_document_length=chunk_size,
           split_documents=True,
-          bsize = batch_size,
           use_faiss=True,
           )
 
-def AppendIndex(RAGMODEL,newMD:str,batch_size=16)->RAGPretrainedModel:
+def AppendIndex(RAGMODEL:RAGPretrainedModel,newMD:str)->RAGPretrainedModel:
     RAGMODEL.add_to_index(new_collection=[newMD],
-      index_name="min-gpt",
-      split_documents=True,
-      bsize = batch_size,
+                          index_name="min-gpt",split_documents=True,
       use_faiss=True
       )
     
@@ -65,9 +62,6 @@ def getContext(RAGMODEL:RAGPretrainedModel,index_name:str,query:str,k=2):
     
 def getRetriever(RAGMODEL:RAGPretrainedModel,index_name:str,k=2):
     return RAGMODEL.as_langchain_retriever(index_name=index_name,k=k)
-
-def html2MD(html:str):
-    return markdownify(html=html)
 
 def createKnowledgeBase(RAGMODEL,index_name:str):
    combined_mds= combinedMD()

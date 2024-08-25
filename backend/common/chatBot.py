@@ -3,17 +3,15 @@ from bs4 import BeautifulSoup
 import re
 from youtube_transcript_api import YouTubeTranscriptApi
 from flask import jsonify
-import os
-import joblib
 from dotenv import load_dotenv
-from PyPDF2 import PdfReader
-from langchain.text_splitter import CharacterTextSplitter
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.vectorstores import FAISS
-from langchain.chat_models import ChatOpenAI
-from langchain.memory import ConversationBufferMemory
-from langchain.chains import ConversationalRetrievalChain
-
+from langchain.memory import MongoDBChatMessageHistory
+from langchain.chains import create_history_aware_retriever,create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from ollama_helper import prompt_get_answer,prompt_search_query
+from decouple import config
+import pymupdf4llm
+from markdownify import markdownify
+from langchain_core.retrievers import BaseRetriever
 
 load_dotenv()
 
@@ -40,103 +38,50 @@ class bot:
                 match = re.search(r'/([^/?]+)\?', video_url)
                 video_id = match.group(1)
             transcript = YouTubeTranscriptApi.get_transcript(video_id)
-            return transcript
+            all_text = [item['text'] for item in transcript]
+            text = " \n".join(all_text)
+            return text
         except Exception as e:
             print(f"Error retrieving transcript: {e}")
             return None
-
-    def extract_text(self, transcript):
-        all_text = [item['text'] for item in transcript]
-        text = " \n".join(all_text)
-        return text
-
-    def text_to_chunk(self, text):
-        chunks = [text[i:i+50] for i in range(0, len(text), 50)]
-        return '/n'.join(chunks)
-
-    def load_vectorstore(self, id):
-        try:
-            vector_store = joblib.load(f'vectorstore-{id}.joblib')
-            return vector_store
-        except Exception as e:
-            return None
-
-    def load_vector(self):
-        try:
-            vector_store = joblib.load(f'vectorstore.joblib')
-            print(f"Vector store loaded successfully: {vector_store}")
-            return vector_store
-        except Exception as e:
-            print(f"Error loading vector store: {e}")
-            return None
-
-    def get_conversation_chain(self, vectorstore):
-        if (vectorstore is None):
+        
+    def get_conversation_chain(self, retriever:BaseRetriever,llm):
+        if (retriever is None):
             print("Vector store is not loaded. Cannot create conversation chain.")
             return None
         try:
-            llm = ChatOpenAI()
-            memory = ConversationBufferMemory(
-                memory_key='chat_history', return_messages=True)
-            conversation_chain = ConversationalRetrievalChain.from_llm(
-                llm=llm,
-                retriever=vectorstore.as_retriever(),
-                memory=memory
-            )
-            return conversation_chain
+            retriever_chain = create_history_aware_retriever(llm,retriever,prompt_search_query)
+            document_chain = create_stuff_documents_chain(llm,prompt_get_answer)
+            retrieval_chain = create_retrieval_chain(retriever_chain, document_chain)
+            return document_chain
         except Exception as e:
             return None
 
-    def handle_userinput(self, user_question, conversation, max_history_tokens=2048):
+    def handle_userinput(self, user_question, conversation,chat_history):
         if conversation is None:
             return ["Error: Conversation chain is not initialized."]
         try:
-            response = conversation({'question': user_question})
-            chat_history = response['chat_history']
-            current_tokens = sum([len(message.content.split()) for message in chat_history])
-            while current_tokens > max_history_tokens:
-                chat_history.pop(0)  
-                current_tokens = sum([len(message.content.split()) for message in chat_history])
-            bot_responses = [message.content for i, message in enumerate(chat_history) if i % 2 == 1]
-            return bot_responses
+            response = conversation.invoke({"chat_history":chat_history,"input":user_question})
+            print({"response":response})
+            return response
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             return [f"Error: {e}"]
+    
+    def pdf2MD(self,path:str):
+        return pymupdf4llm.to_markdown(path)
+    
+    def html2MD(self,html:str):
+        return markdownify(html=html)
 
-    def get_pdf_text(self, pdf_docs):
-        text = ""
-        for pdf in pdf_docs:
-            try:
-                print(f"Processing '{pdf}'")
-                pdf_reader = PdfReader(pdf)
-                for page in pdf_reader.pages:
-                    text += page.extract_text()
-            except Exception as e:
-                print(f"Error reading PDF file '{pdf}': {e}")
-        return text
-
-    def get_text_chunks(self, text):
-        if text is None:
-            print("text is none")
-            return []
-        text_splitter = CharacterTextSplitter(
-            separator="\n",
-            chunk_size=1000,
-            chunk_overlap=200,
-            length_function=len
-        )
-        chunks = text_splitter.split_text(text)
-        return chunks
-
-    def create_vectorstore(self, text_chunks, id):
-        embeddings = OpenAIEmbeddings()
-        vector_store_file = f"vectorstore-{id}.joblib"
-        if os.path.exists(vector_store_file):
-            vector_store = joblib.load(vector_store_file)
-        else:
-            vector_store = joblib.load('vectorstore.joblib')
-        for i in range(0, len(text_chunks), 10):
-            batch = text_chunks[i:i+10]
-            batch_vector_store = FAISS.from_texts(texts=batch, embedding=embeddings)
-            vector_store.merge_from(batch_vector_store)
-        joblib.dump(vector_store, filename=vector_store_file)
-        return vector_store
+    def getMessageHistory(self,id:str):
+        uri = config("MONGO_URI")
+        message_history= MongoDBChatMessageHistory(connection_string=uri,session_id=id,database_name="minGPT",collection_name="chat_history")
+        return message_history.messages[-10:]
+    
+    def updateMessageHistory(self,id:str,query:str,response:str):
+        uri = config("MONGO_URI")
+        message_history= MongoDBChatMessageHistory(connection_string=uri,session_id=id,database_name="minGPT",collection_name="chat_history")
+        message_history.add_user_message(query)
+        message_history.add_ai_message(response)

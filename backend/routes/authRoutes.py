@@ -1,13 +1,14 @@
 from bson import ObjectId
-# from pymongo import ObjectId
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
 from flask import request,jsonify,Blueprint
 from flask_bcrypt import Bcrypt
 from common.db import db
 from datetime import datetime,timedelta
+from resource_manager import ResourceManager
 
 auth_blueprint = Blueprint('authentications', __name__)
 bcrypt = Bcrypt()
+RM=ResourceManager()
 
 @auth_blueprint.route('/register', methods=['POST'])
 def signup():
@@ -36,8 +37,11 @@ def signup():
             'updated_at': datetime.utcnow()
         }
         print("going to insert new user")
-        if db.users.insert_one(new_user):
-          print("inserted successfully")
+        newUser = db.users.insert_one(new_user) 
+        if newUser:
+          Rag,_=RM.get_resources()
+          RM.createIndex(index_name=f"{newUser.inserted_id}_index")
+          
           return jsonify({"success":True,"message": "User Registered Successfully"}), 200
         else:
           return jsonify({"success":False,"message": "Internal Server Error"}), 200
