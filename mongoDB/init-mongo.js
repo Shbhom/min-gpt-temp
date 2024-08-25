@@ -1,3 +1,4 @@
+use admin
 db.createUser(
     {
         user: "nodeClient",
@@ -7,6 +8,7 @@ db.createUser(
                 role: "readWrite",
                 db: "minGPT"
             }
+            , { role: "readWrite", db: "chat_history" }
         ]
     }
 );
