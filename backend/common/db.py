@@ -3,4 +3,4 @@ from decouple import config
 
 uri = config('MONGO_URI')
 client = MongoClient(uri)
-db = client['minGPT']
+db = client['test']
