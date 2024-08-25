@@ -2,18 +2,46 @@ version: '3'
 services:
   flask-backend:
     build: ./backend
-    volumes:
-      - ./backend:/app
+    container_name: minGPT-backend
+    env_file:
+      - ./backend/.env
+    networks:
+      - minGPT-netw
     ports:
       - "5000:5000"
-
-  react-frontend:
-    build: ./frontend
     volumes:
-      - ./frontend:/app
-    ports:
-      - "3000:3000"
+      - ./backend/.ragatouille:/app/.ragatouille
+      - ./backend/Data:/app/Data
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
 
+  # react-frontend:
+  #   build: ./frontend
+  #   env_file:
+  #     - ./frontend/.env
+  #   networks:
+  #     - minGPT-netw
+  #   ports:
+  #     - "3000:3000"
+
+  mongo:
+    image: mongo:latest
+    ports:
+      - 27017:27017
+    container_name: minGPT-mongodb
+    volumes:
+      - mongoData:/data/db
+      - ./mongoDB/init-mongo.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - minGPT-netw
+    command: [ --auth ]
+    env_file:
+      - ./mongoDB/.env-mongo
   # nginx:
   #   build: ./nginx
   #   volumes:
@@ -25,3 +53,32 @@ services:
   #   depends_on:
   #     - flask-backend
   #     - react-frontend
+  ollama:
+    image: ollama/ollama
+    container_name: min-llama
+    networks:
+      - minGPT-netw
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ollama:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - capabilities: [ gpu ]
+    # runtime: nvidia
+
+networks:
+  minGPT-netw:
+
+
+volumes:
+  mongoData:
