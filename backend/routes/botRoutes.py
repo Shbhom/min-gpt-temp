@@ -178,7 +178,7 @@ def ask_question():
         chat_history = chatBot.getMessageHistory(str(id))
         
         if db.usage.insert_one({"user_id":id, "type":"response", 'created_at': datetime.now()}):
-            bot_responses = chatBot.handle_userinput(user_question=user_question,conversation=conversation,chat_history=chat_history,retriever=ret)
+            bot_responses = chatBot.handle_userinput(user_question=user_question,conversation=conversation,chat_history=chat_history)
             chatBot.updateMessageHistory(str(id),query=user_question,response=bot_responses)
             return jsonify({"success":True, 'response': bot_responses})
         else:
@@ -211,7 +211,7 @@ def process_pdf():
         pdf_document = fitz.open(stream=pdf_file.read(), filetype="pdf")
         md = chatBot.pdf2MD(pdf_document)
         if db.usage.insert_one({"user_id":id, "type":"pdf", 'created_at': datetime.now()}):
-            RM.updateIndex(indexName=f"{id}",md=md)
+            RM.updateIndex(indexName=f"{id}_index",md=md)
             return jsonify({"success":True, 'message':"Pdf processing Successfull" })
         else:
             return jsonify({"success":True, 'message': "Something Went Wrong"})
@@ -249,7 +249,8 @@ def tts():
 
     audio_url=os.path.join(os.path.dirname(os.path.dirname(__file__)),"output","result","LJSpeech","sound.wav")
     print(audio_url)
-    return jsonify({"success":True, 'message': data})
+    # return jsonify({"success":True, 'message': data})
+    return send_file(audio_url, mimetype="audio/wav", as_attachment=True, download_name="sound.wav")
 
     
     
@@ -270,7 +271,7 @@ def process_video():
             return jsonify({"success":False,"message":"Response Limit Reached"})
         transcript  = chatBot.get_video_transcript(video_url)
         if db.usage.insert_one({"user_id":id, "type":"video", 'created_at': datetime.now()}):
-            RM.updateIndex(indexName=f"{id}",md=transcript)
+            RM.updateIndex(indexName=f"{id}_index",md=transcript)
             return jsonify({"success":True, 'message':"Video processing Successfull" })
         else:
             return jsonify({"success":True, 'message': "Something Went Wrong"})
@@ -300,7 +301,7 @@ def process_url():
         txt = chatBot.scrape_website(url)
         new_md = chatBot.html2MD(txt)
         if db.usage.insert_one({"user_id":id, "type":"website", 'created_at': datetime.now()}):
-            RM.updateIndex(indexName=f"{id}",md=new_md)
+            RM.updateIndex(indexName=f"{id}_index",md=new_md)
             return jsonify({"success":True, 'message':"Video processing Successfull" })
         else:
             return jsonify({"success":True, 'message': "Something Went Wrong"})

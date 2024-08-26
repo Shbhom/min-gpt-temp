@@ -6,3 +6,4 @@ nginx/
 **/flask
 ollama/
 k8s/
+test
